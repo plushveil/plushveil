@@ -1,0 +1,41 @@
+name: CD
+
+on:
+  push:
+    branches: [ latest ]
+
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - id: build
+      uses: plushveil/pages@latest
+      with:
+        folder: '.'
+      env:
+        HOST: plushveil.github.io
+        PORT: 443
+        PATHNAME: /plushveil/
+  
+    - name: Checkout GitHub Pages Branch
+      uses: actions/checkout@v4
+      with:
+        ref: gh-pages
+        path: gh-pages
+
+    - name: Deploy to GitHub Pages
+      run: |
+        cd gh-pages
+        ls -A | grep -v '^\.\|CNAME\|preview' | xargs rm -rf
+        cp -r ${{steps.build.outputs.folder}}/* .
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "github-actions[bot]@users.noreply.github.com"
+        git add .
+        git commit -m "${{ github.actor }}: ${{ github.event.head_commit.message }}" || exit 0
+        git push
